@@ -1,0 +1,9 @@
+python  §A = False
+python  §B = True
+python  §C = None
+lua     §print(A)
+lua     §print(B)
+lua     §print(C)
+c       §printf("%d\n", A);
+c       §printf("%d\n", B);
+c       §printf("%d\n", C);

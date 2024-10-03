@@ -1,0 +1,4 @@
+c       §char value = 100;
+c       §printf("%d\n", value);
+python  §value += 28
+lua     §print(value)

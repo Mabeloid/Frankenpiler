@@ -1,0 +1,6 @@
+lua     §nums = {1, 2, 3, 4}
+lua     §fruits = {"strawberry", "pitaya", "grape",
+lua     §"mango", "canteloupe", "watermelon", "papaya"}
+python  §print(nums[::-1] * len(nums))
+python  §fruits.sort()
+lua     §print(fruits[1])

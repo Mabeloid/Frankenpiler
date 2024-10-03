@@ -1,0 +1,2 @@
+python  §is_green = False
+c       §puts(is_green ? "it's green!" : "sadly, it isn't green...");

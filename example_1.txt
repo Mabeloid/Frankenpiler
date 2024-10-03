@@ -1,0 +1,4 @@
+c		§char text[] = "Hello";
+lua 	§text = text.." world!"
+c		§puts(text);
+lua     §print(#text)
