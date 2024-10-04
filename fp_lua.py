@@ -34,7 +34,6 @@ def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
     assert not (r'\"' in code)
     print_G = """
 print("%s")
-print(_VERSION)
 for name, value in pairs(_G) do
     if type(value) == "table" then
         _ = "table[" .. type(value[1]) .. "]" .. "%s" .. name .. "%s"
@@ -75,7 +74,6 @@ def vars_eval(sep: str):
     print(stdout, end="")
 
     #extract global variables
-    _VERSION = _G.pop(1)
     var_vals = {}
     for line in _G:
         if not line: continue
@@ -83,15 +81,15 @@ def vars_eval(sep: str):
             raise NotImplementedError(line.split(sep))
         vtype, vname, data = line.split(sep)
         if vname in [
-                "string", "xpcall", "package", "tostring", "print", "os",
-                "unpack", "require", "getfenv", "setmetatable", "next",
-                "assert", "tonumber", "io", "rawequal", "collectgarbage",
-                "arg", "getmetatable", "module", "rawset", "load", "math",
-                "debug", "pcall", "table", "newproxy", "type", "coroutine",
-                "_G", "select", "gcinfo", "pairs", "rawget", "loadstring",
-                "ipairs", "_VERSION", "dofile", "setfenv", "error", "loadfile"
+                "debug", "io", "xpcall", "string", "load", "os", "ipairs",
+                "rawlen", "warn", "error", "math", "package", "getmetatable",
+                "assert", "rawset", "dofile", "type", "arg", "next",
+                "coroutine", "require", "select", "rawget", "table", "pairs",
+                "loadfile", "utf8", "setmetatable", "tostring", "_G", "pcall",
+                "tonumber", "_VERSION", "rawequal", "collectgarbage", "print"
         ]:
             continue
+
         match vtype:
             case "integer":
                 data = int(data)

@@ -1,3 +1,11 @@
+```
+c		§char text[] = "!dlrow";
+lua 	§text = text.." elloH"
+python  §print(text[::-1])
+
+>>> Hello world!
+```
+
 works for python versions 3.12 or later
 
 

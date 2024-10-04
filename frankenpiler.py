@@ -62,4 +62,4 @@ class FrankenPiler:
 
 
 if __name__ == "__main__":
-    FrankenPiler("example_5.txt")
+    FrankenPiler("example_1.txt")
