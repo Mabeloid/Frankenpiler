@@ -6,19 +6,26 @@ from config import PYTHON_PATH
 from fp_update_vars import update_vars
 
 
-def declare(vname: str, info: dict[str, Any]):
-    dtype = " ".join(f for f in info["type"] if f)
-    matchtype = " ".join(f for f in info["type"][1:] if f)
-    match matchtype:
-        case "int" | "integer" | "float" |  "double" | "char" |  \
-            "bool" |"boolean" | "NoneType" | "nil" | "table[number]" | \
-            "table[string]" | "list[str]" | "list[int]" | "list[float]":
-            return f"{vname} = {info['value']}"
-        case "char *" | "string" | "str":
-            return f"{vname} = '{info['value']}'"
+def formatvar(types: list[str], value: Any) -> str:
+    _type, *subtypes = types
+    match _type:
+        case "int" |  "signed int" | "integer" | "float" |  "double" | "signed char" |  \
+            "bool" | "boolean" | "NoneType" | "nil":
+            return str(value)
+        case "signed char *" | "string" | "str":
+            return f"'{value}'"
+        case "table" | "list":
+            pieces = [formatvar(subtypes, v) for v in value]
+            return "[" + ", ".join(pieces) + "]"
+        case "dict":
+            pieces = [formatvar(subtypes[0:1], k) + ": " + formatvar(subtypes[1:2], v) for k,v in value.items()]
+            return "{" + ", ".join(pieces) + "}"
         case _:
-            raise NotImplementedError(matchtype, dtype, vname, info)
-    return line
+            raise NotImplementedError("unknown type:", types, _type)
+
+
+def declare(vname: str, info: dict[str, Any]):
+    return f"{vname} = {formatvar(info["type"], info["value"])}"
 
 
 def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
@@ -26,14 +33,8 @@ def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
     for vname, info in var_vals.items():
         lines += [declare(vname, info)]
     assert not (r'\"' in code)
-    print_globals = """
-print("%s")
-for __, ___ in globals().copy().items():
-    if isinstance(___, list): _ = f"list[{type(___[1]).__name__}]"
-    else: _ = type(___).__name__
-    _ += "%s" + __ + "%s" + str(___)
-    print(_)
-"""
+    with open("code_inserts/fp_insert.py", "r") as f:
+        print_globals = f.read()
     sep = hex(hash(code))
     print_globals = print_globals.replace("%s", sep)
     lines += [code, print_globals]
@@ -63,20 +64,14 @@ def vars_eval(sep: str):
                 "__annotations__", "__builtins__", "__file__", "__cached__"
         }:
             continue
-        match vtype:
-            case "int":
-                data = int(data)
-            case "str":
-                data = data
-            case "bool":
-                data = data == "True"
-            case "NoneType":
-                data = None
-            case "list[int]" | "list[str]" | "list[float]":
-                data = ast.literal_eval(data)
-            case _:
-                raise NotImplementedError(line.split(sep))
-        vtype = ["", vtype, ""]
+
+        vtype = vtype.split("|")
+        if not all(
+            t in ["int",
+                  "str", "float", "bool", "NoneType", "list", "dict"]
+            for t in vtype):
+                raise NotImplementedError(vtype)
+        if vtype != ["str"]: data = ast.literal_eval(data)
         var_vals[vname] = {"lang": "python", "type": vtype, "value": data}
     return var_vals
 

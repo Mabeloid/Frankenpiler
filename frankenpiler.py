@@ -18,7 +18,7 @@ class FrankenPiler:
         lines: list[list[str]] = []
         for line in sourcelines:
             if not line: continue
-            lang, code = line.split("§")
+            lang, _, code = line.partition("§")
             lang = lang.rstrip("\t ")
             lines.append([lang, code])
 
@@ -39,7 +39,7 @@ class FrankenPiler:
                  args: Optional[str | list[str]] = None) -> None:
 
         if args: raise NotImplementedError("args")
-        if True: os.system("cls")
+        if not True: os.system("cls")
 
         codes = self.readcode(filepath)
         os.makedirs("tmpcode", exist_ok=True)
@@ -52,14 +52,21 @@ class FrankenPiler:
                 print("-" * 50)
                 print(lang)
                 print(code)
-                for k, v in var_vals.items():
-                    print(f"{k} = {v}")
+                if not var_vals:
+                    print("no vars!".center(50, "."))
+                else:
+                    print("vars".center(50, "."))
+                    for k, v in var_vals.items():
+                        print(f"{k} = {v}")
                 print("-" * 50)
 
-        #delete tmp files
-        for f in os.listdir("tmpcode"):
-            os.remove("tmpcode/" + f)
+        if False:
+            #delete tmp files
+            for f in os.listdir("tmpcode"):
+                os.remove("tmpcode/" + f)
 
 
 if __name__ == "__main__":
-    FrankenPiler("example_1.txt")
+    for i in range(6):
+        print((" " + str(i) + " ").center(50, "="))
+        FrankenPiler("example_%d.txt" % i)

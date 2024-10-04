@@ -1,13 +1,8 @@
 from typing import Any
 
 
-def cast_var(oldinfo: dict[str, Any], info: dict[str, Any]) -> Any:
-    val = info["value"]
-    lang = info["lang"]
-    vtype = " ".join(f for f in oldinfo["type"] if f)
-    match vtype:
-
-    #   # c
+def cast_c(type: str, val: Any) -> Any:
+    match type:
         case "unsigned char":
             return int(val) % 256
         case "signed char":
@@ -18,20 +13,37 @@ def cast_var(oldinfo: dict[str, Any], info: dict[str, Any]) -> Any:
         case "signed int":
             val = int(val) % 2**32
             return val - 2**32 * (val > (2**31 - 1))
-
         case "float":
-            if lang in ["c"]:
-                import struct
-                return struct.unpack("f", struct.pack("f", val))[0]
-            elif lang in ["python", "lua"]:
-                return float(val)
-            raise NotImplementedError(lang, "float")
+            import struct
+            return struct.unpack("f", struct.pack("f", val))[0]
         case "double":
             return float(val)
         case "signed char *":
             return str(val)
+        case _:
+            if type[-1] == "*":
+                return [cast_c(type.rstrip(" *"), v) for v in val]
+            raise NotImplementedError(type)
 
-        # python
+def cast_lua(type: list[str], val: Any) -> Any:
+    match type[0]:
+        case "integer":
+            return int(val)
+        case "float":
+            return float(val)
+        case "string":
+            return str(val)
+        case "boolean":
+            return bool(val)
+        case "nil":
+            return None
+        case "table":
+            return [cast_lua(type[1:], v) for v in val]
+        case _:
+            raise NotImplementedError(type[0])
+
+def cast_python(type: list[str], val: Any) -> Any:
+    match type[0]:
         case "int":
             return int(val)
         case "str":
@@ -40,28 +52,23 @@ def cast_var(oldinfo: dict[str, Any], info: dict[str, Any]) -> Any:
             return bool(val)
         case "NoneType":
             return None
-        case "list[float]":
-            return [float(v) for v in val]
-        case "list[int]":
-            return [int(v) for v in val]
-
-        # lua
-        case "integer":
-            return val
-        case "string":
-            return str(val)
-        case "boolean":
-            return bool(val)
-        case "nil":
-            return None
-        case "table[string]":
-            return [str(v) for v in val]
-        case "table[number]":
-            return [v for v in val]
-
-        # other
+        case "list":
+            return [cast_python(type[1:], v) for v in val]
+        case "dict":
+            raise NotImplementedError("cast dict")
         case _:
-            raise NotImplementedError(vtype)
+            raise NotImplementedError(type[0])
+
+
+def cast_var(info: dict[str, Any], newinfo: dict[str, Any]) -> Any:
+    val = newinfo["value"]
+    match info["lang"]:
+        case "c":
+            return cast_c(info["type"][0], val)
+        case "lua":
+            return cast_lua(info["type"], val)
+        case "python":
+            return cast_python(info["type"], val)
 
 
 def update_vars(var_vals: dict[str, dict[str, Any]],

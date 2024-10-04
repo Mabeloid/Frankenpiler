@@ -6,25 +6,33 @@ from config import LUA_PATH
 from fp_update_vars import update_vars
 
 
-def declare(vname: str, info: dict[str, Any]):
-    dtype = " ".join(f for f in info["type"] if f)
-    matchtype = " ".join(f for f in info["type"][1:] if f)
-    match matchtype:
-        case "char" | "int" | "float" | "number":
-            line = f"{vname} = {info['value']}"
+def formatvar(types: list[str], value: Any) -> str:
+    _type, *subtypes = types
+    match _type:
+        case "int" | "signed int" | "integer" | "float" | "double" | "signed char":
+            return str(value)
+        case "bool" | "boolean":
+            return str(value).lower()
         case "NoneType" | "nil":
-            line = f"{vname} = nil"
-        case "bool":
-            b = ["false", "true"][info["value"]]
-            line = f"{vname} = {b}"
-        case "char *" | "string" | "str":
-            line = f"{vname} = '{info['value']}'"
-        case "table[string]" | "table[number]" | "list[str]" | "list[float]" | "list[int]":
-            tablestr = "{" + str(info['value'])[1:-1] + "}"
-            line = f"{vname} = {tablestr}"
+            return "nil"
+        case "signed char *" | "string" | "str":
+            return f"'{value}'"
+        case "table" | "list":
+            pieces = [formatvar(subtypes, v) for v in value]
+            return "{" + ", ".join(pieces) + "}"
+        case "dict":
+            raise NotImplementedError("python dict in lua")
+            pieces = [
+                formatvar(subtypes[0:1], k) + "=" +
+                formatvar(subtypes[1:2], v) for k, v in value.items()
+            ]
+            return "{" + ", ".join(pieces) + "}"
         case _:
-            raise NotImplementedError(matchtype, dtype, vname, info)
-    return line
+            raise NotImplementedError("unknown type:", types)
+
+
+def declare(vname: str, info: dict[str, Any]):
+    return f"{vname} = {formatvar(info['type'], info['value'])}"
 
 
 def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
@@ -32,28 +40,8 @@ def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
     for vname, info in var_vals.items():
         lines += [declare(vname, info)]
     assert not (r'\"' in code)
-    print_G = """
-print("%s")
-for name, value in pairs(_G) do
-    if type(value) == "table" then
-        _ = "table[" .. type(value[1]) .. "]" .. "%s" .. name .. "%s"
-        _ = _ .. "["
-        for __, t_value in ipairs(value) do
-            if type(t_value) == "string" then
-                _ = _ .. '"' .. tostring(t_value) .. '"' .. ","
-            else
-                _ = _ .. tostring(t_value) .. ","
-            end
-        end
-        _ = _:sub(1, -2) .. "]"
-    elseif type(value) == "number" then
-        _ = math.type(value) .. "%s" .. name .. "%s" .. tostring(value)
-    else
-        _ = type(value) .. "%s" .. name .. "%s" .. tostring(value)
-    end
-    if name ~= "_" then print(_) end
-end
-"""
+    with open("code_inserts/fp_insert.lua", "r") as f:
+        print_G = f.read()
     sep = hex(hash(code))
     print_G = print_G.replace("%s", sep)
     lines += [code, print_G]
@@ -90,22 +78,8 @@ def vars_eval(sep: str):
         ]:
             continue
 
-        match vtype:
-            case "integer":
-                data = int(data)
-            case "float":
-                data = float(data)
-            case "string":
-                data = data
-            case "nil":
-                data = None
-            case "boolean":
-                data = data == "true"
-            case "table[number]" | "table[string]":
-                data = ast.literal_eval(data)
-            case _:
-                raise NotImplementedError(line.split(sep))
-        vtype = ["", vtype, ""]
+        vtype = vtype.split("|")
+        data = ast.literal_eval(data)
         var_vals[vname] = {"lang": "lua", "type": vtype, "value": data}
     return var_vals
 

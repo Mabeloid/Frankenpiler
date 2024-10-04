@@ -7,67 +7,67 @@ from config import CPPCHECK_PATH, GCC_PATH, GDB_PATH
 from fp_update_vars import update_vars
 
 
-def declare(vname: str, info: dict[str, Any]):
-    dtype = " ".join(f for f in info["type"] if f)
-    matchtype = " ".join(f for f in info["type"][1:] if f)
-    lang = info["lang"]
-    match matchtype:
-
+def formatvar(lang: str, types: list[str], value: Any) -> tuple[str, Any]:
+    _type, *subtypes = types
+    match _type:
         case "char" | "double" | "long" | "long long":
-            line = f"{dtype} {vname} = {info['value']};"
-
+            return _type, value
         case "int":
             if lang in ["python"]:
-                dtype = "long long"
-            line = f"{dtype} {vname} = {info['value']};"
-
+                _type = "long long"
+            return _type, value
         case "integer":
-            line = f"long long {vname} = {info['value']};"
-
+            return "long long", value
         case "float":
             if lang in ["python", "lua"]:
-                dtype = "double"
-            line = f"{dtype} {vname} = {info['value']};"
-
+                _type = "double"
+            return _type, value
         case "bool" | "boolean":
-            line = f"int {vname} = {int(info['value'])};"
-
+            return "int", int(value)
         case "NoneType" | "nil":
-            line = f"void * {vname} = NULL;"
+            return "void *", "NULL"
 
         case "char *" | "string" | "str":
-            size = len(info['value'].encode('utf-8')) + 1
-            line = f"char {vname}[{size}] = \"{info['value']}\";"
-
-        case "float *" | "int *":
-            arrstr = "{" + str(info['value'])[1:-1] + "}"
-            line = f"{dtype} {vname}[{len(info['value'])}] = {arrstr};"
-
-        case "list[float]":
-            arrstr = "{" + str(info['value'])[1:-1] + "}"
-            line = f"double {vname}[{len(info['value'])}] = {arrstr};"
-
-        case "list[int]":
-            arrstr = "{" + str(info['value'])[1:-1] + "}"
-            line = f"long long {vname}[{len(info['value'])}] = {arrstr};"
-
-        case "table[number]":
-            is_ints = all(x == round(x) for x in info['value'])
-            dtype = ["double", "long long"][is_ints]
-            arrstr = "{" + str(info['value'])[1:-1] + "}"
-            line = f"{dtype} {vname}[{len(info['value'])}] = {arrstr};"
-
-        case "char **" | "table[string]" | "list[str]":
-            raise TypeError("arrays of strings do not " +
-                            "show up in gdb due to having " +
-                            "double pointers so their value " +
-                            "can't be read by the program")
-            arrstr = "{" + str(info['value'])[1:-1] + "}"
-            line = f"char * {vname}[] = {arrstr};"
-
+            return "char *", '"' + value + '"'
+        case "list" | "table":
+            raise NotImplementedError("lists or tables!")
+        case "dict":
+            raise NotImplementedError("dictionaries!")
         case _:
-            raise NotImplementedError(dtype, vname, info)
-    return line
+            raise NotImplementedError("unknown type:", types, value)
+        # case "float *" | "int *":
+        #     arrstr = "{" + str(info['value'])[1:-1] + "}"
+        #     line = f"{_type} {vname}[{len(info['value'])}] = {arrstr};"
+
+        # case "list[float]":
+        #     arrstr = "{" + str(info['value'])[1:-1] + "}"
+        #     line = f"double {vname}[{len(info['value'])}] = {arrstr};"
+
+        # case "list[int]":
+        #     arrstr = "{" + str(info['value'])[1:-1] + "}"
+        #     line = f"long long {vname}[{len(info['value'])}] = {arrstr};"
+
+        # case "table[number]":
+        #     is_ints = all(x == round(x) for x in info['value'])
+        #     _type = ["double", "long long"][is_ints]
+        #     arrstr = "{" + str(info['value'])[1:-1] + "}"
+        #     line = f"{_type} {vname}[{len(info['value'])}] = {arrstr};"
+
+        # case "char **" | "table[string]" | "list[str]":
+        #     raise TypeError("arrays of strings do not " +
+        #                     "show up in gdb due to having " +
+        #                     "double pointers so their value " +
+        #                     "can't be read by the program")
+        #     arrstr = "{" + str(info['value'])[1:-1] + "}"
+        #     line = f"char * {vname}[] = {arrstr};"
+
+        # case _:
+        #     raise NotImplementedError(_type, vname, info)
+
+
+def declare(vname: str, info: dict[str, Any]):
+    _type, value = formatvar(info["lang"], info["type"], info["value"])
+    return f"{_type} {vname} = {value};"
 
 
 def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
@@ -82,7 +82,7 @@ def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
     return outcode
 
 
-def parsegdb(vtype: list[str], line: str) -> Any:
+def parsegdb(vtype: str, line: str) -> Any:
 
     def gcd_repeatstimes(line: str) -> str:
         if not line.endswith(" times>"):
@@ -98,21 +98,19 @@ def parsegdb(vtype: list[str], line: str) -> Any:
             else: raise NotImplementedError(part)
         return data
 
-    #dtype = " ".join(f for f in vtype if f)
-    matchtype = " ".join(f for f in vtype[1:] if f)
-    match matchtype:
-        case "char":
+    match vtype:
+        case "signed char":
             data = int(line.split(" ")[0])
-        case "char *":
+        case "signed char *":
             if line[:2] == "0x": data = line.split(" ")[1][1:-1]
             else: data = gcd_repeatstimes(line)
         case "float" | "double":
             data = float(line)
-        case "long long" | "long" | "int":
+        case "long long" | "long" | "signed int":
             data = int(line)
         case "void *":
             if line == "(void *) 0x0": data = None
-            else: raise NotImplementedError(matchtype, line)
+            else: raise NotImplementedError(vtype, line)
         case "int *":
             data = ast.literal_eval("[" + line[1:-1] + "]")
         case "long long *":
@@ -142,11 +140,12 @@ def findvars() -> dict[str, list[str]]:
 
         if not (a["scope"] == mainscope and a.get("variable")): continue
         if (bracketing != 0) or _vars.get(vname): continue
-        vtype = [
-            a.get("valueType-sign"), a["valueType-type"],
+        type_fields = [
+            a.get("valueType-sign", ""), a["valueType-type"],
             int(a.get("valueType-pointer", "0")) * "*"
         ]
-        _vars[vname] = vtype
+        type_fields = [f for f in type_fields if f]
+        _vars[vname] = [" ".join(type_fields)]
     return _vars
 
 
@@ -180,7 +179,7 @@ def compile_eval(outcode: str, _vars: dict[str, dict[str, Any]]):
     var_vals = {}
     for line, (vname, vtype) in zip(outputs[2:], _vars.items()):
         line = line.partition(" = ")[2]
-        data = parsegdb(vtype, line)
+        data = parsegdb(vtype[0], line)
         var_vals[vname] = {"lang": "c", "type": vtype, "value": data}
     return var_vals
 
