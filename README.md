@@ -1,6 +1,6 @@
 ```
-c		§char text[] = "!dlrow";
-lua 	§text = text.." elloH"
+c       §char text[] = "!dlrow";
+lua     §text = text.." elloH"
 python  §print(text[::-1])
 
 >>> Hello world!
