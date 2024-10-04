@@ -23,7 +23,9 @@ def cast_var(oldinfo: dict[str, Any], info: dict[str, Any]) -> Any:
             if lang in ["c"]:
                 import struct
                 return struct.unpack("f", struct.pack("f", val))[0]
-            return float(val)
+            elif lang in ["python", "lua"]:
+                return float(val)
+            raise NotImplementedError(lang, "float")
         case "double":
             return float(val)
         case "signed char *":
@@ -44,10 +46,8 @@ def cast_var(oldinfo: dict[str, Any], info: dict[str, Any]) -> Any:
             return [int(v) for v in val]
 
         # lua
-        case "number":
+        case "integer":
             return val
-            if isinstance(val, int): return int(val)
-            else: return float(val)
         case "string":
             return str(val)
         case "boolean":

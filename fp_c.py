@@ -7,34 +7,6 @@ from config import CPPCHECK_PATH, GCC_PATH, GDB_PATH
 from fp_update_vars import update_vars
 
 
-def findvars(outcode: str) -> dict[str, list[str]]:
-    with open("tmpcode/tmp.c", "w", encoding="utf-8") as f:
-        f.write(outcode)
-    #find variables using cppcheck
-    subprocess.run([CPPCHECK_PATH, "--dump", "--debug", "tmpcode/tmp.c"],
-                   capture_output=True)
-    tree = etree.parse('tmpcode/tmp.c.dump')
-    tokens = tree.getroot().find("dump").find("tokenlist")
-    mainscope = [*tokens][-1].attrib["scope"]
-
-    _vars = {}
-    bracketing = -1
-    for token in tokens:
-        a: dict[str, str] = token.attrib
-        vname = a["str"]
-        if vname in "({": bracketing += 1
-        elif vname in "})": bracketing -= 1
-
-        if not (a["scope"] == mainscope and a.get("variable")): continue
-        if (bracketing != 0) or _vars.get(vname): continue
-        vtype = [
-            a.get("valueType-sign"), a["valueType-type"],
-            int(a.get("valueType-pointer", "0")) * "*"
-        ]
-        _vars[vname] = vtype
-    return _vars
-
-
 def declare(vname: str, info: dict[str, Any]):
     dtype = " ".join(f for f in info["type"] if f)
     matchtype = " ".join(f for f in info["type"][1:] if f)
@@ -43,18 +15,23 @@ def declare(vname: str, info: dict[str, Any]):
 
         case "char" | "double" | "long" | "long long":
             line = f"{dtype} {vname} = {info['value']};"
+
         case "int":
-            if lang in ["python", "lua"]:
+            if lang in ["python"]:
                 dtype = "long long"
             line = f"{dtype} {vname} = {info['value']};"
 
+        case "integer":
+            line = f"long long {vname} = {info['value']};"
+
         case "float":
-            if lang in ["python"]:
+            if lang in ["python", "lua"]:
                 dtype = "double"
             line = f"{dtype} {vname} = {info['value']};"
 
         case "bool" | "boolean":
             line = f"int {vname} = {int(info['value'])};"
+
         case "NoneType" | "nil":
             line = f"void * {vname} = NULL;"
 
@@ -93,13 +70,16 @@ def declare(vname: str, info: dict[str, Any]):
     return line
 
 
-def formatcode(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
+def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
     lines = ["#include <stdio.h>", "#include <string.h>", "int main(){"]
     for vname, info in var_vals.items():
         lines += [declare(vname, info)]
     assert not (r'\"' in code)
     lines += [code, "}"]
-    return "\n".join(lines)
+    outcode = "\n".join(lines)
+    with open("tmpcode/tmp.c", "w", encoding="utf-8") as f:
+        f.write(outcode)
+    return outcode
 
 
 def parsegdb(vtype: list[str], line: str) -> Any:
@@ -144,14 +124,39 @@ def parsegdb(vtype: list[str], line: str) -> Any:
     return data
 
 
+def findvars() -> dict[str, list[str]]:
+    #find variables using cppcheck
+    subprocess.run([CPPCHECK_PATH, "--dump", "--debug", "tmpcode/tmp.c"],
+                   capture_output=True)
+    tree = etree.parse('tmpcode/tmp.c.dump', parser=None)
+    tokens = tree.getroot().find("dump").find("tokenlist")
+    mainscope = [*tokens][-1].attrib["scope"]
+
+    _vars = {}
+    bracketing = -1
+    for token in tokens:
+        a: dict[str, str] = token.attrib
+        vname = a["str"]
+        if vname in "({": bracketing += 1
+        elif vname in "})": bracketing -= 1
+
+        if not (a["scope"] == mainscope and a.get("variable")): continue
+        if (bracketing != 0) or _vars.get(vname): continue
+        vtype = [
+            a.get("valueType-sign"), a["valueType-type"],
+            int(a.get("valueType-pointer", "0")) * "*"
+        ]
+        _vars[vname] = vtype
+    return _vars
+
+
 def compile_eval(outcode: str, _vars: dict[str, dict[str, Any]]):
     #compile without debug flags
-    subprocess.run(
+    result = subprocess.run(
         [GCC_PATH, "-g", "-O0", "tmpcode/tmp.c", "-o", "tmpcode/tmp.exe"],
         capture_output=True)
-    commands = [f"b {outcode.count('\n')+1}", "run"]
-    commands += [f"p {vname}" for vname in _vars.keys()]
-    _input = "\n".join(commands).encode("utf-8")
+    stderr = result.stderr.decode(errors='ignore').replace("\r\n", "\n")
+    if stderr: raise SystemError("GCC failed to compile:\n\n" + stderr)
 
     #run compiled to extract stdout and stderr
     result = subprocess.run("tmpcode/tmp.exe", capture_output=True)
@@ -161,6 +166,9 @@ def compile_eval(outcode: str, _vars: dict[str, dict[str, Any]]):
     print(stdout, end="")
 
     #run again in gdb to evaluate variables
+    commands = [f"b {outcode.count('\n') + 1}", "run"]
+    commands += [f"p {vname}" for vname in _vars.keys()]
+    _input = "\n".join(commands).encode("utf-8")
     result = subprocess.run([GDB_PATH, "tmpcode/tmp.exe"],
                             input=_input,
                             capture_output=True)
@@ -178,8 +186,8 @@ def compile_eval(outcode: str, _vars: dict[str, dict[str, Any]]):
 
 
 def full_eval(code: str, var_vals: dict[str, dict[str, Any]]):
-    outcode = formatcode(code, var_vals)
-    _vars = findvars(outcode)
+    outcode = gen_code(code, var_vals)
+    _vars = findvars()
     new_var_vals = compile_eval(outcode, _vars)
     update_vars(var_vals, new_var_vals)
     return var_vals

@@ -10,8 +10,8 @@ def declare(vname: str, info: dict[str, Any]):
     dtype = " ".join(f for f in info["type"] if f)
     matchtype = " ".join(f for f in info["type"][1:] if f)
     match matchtype:
-        case "int" | "float" | "number" | "double" | "char" | "bool" | \
-            "boolean" | "NoneType" | "nil" | "table[number]" | \
+        case "int" | "integer" | "float" |  "double" | "char" |  \
+            "bool" |"boolean" | "NoneType" | "nil" | "table[number]" | \
             "table[string]" | "list[str]" | "list[int]" | "list[float]":
             return f"{vname} = {info['value']}"
         case "char *" | "string" | "str":
@@ -21,8 +21,7 @@ def declare(vname: str, info: dict[str, Any]):
     return line
 
 
-def formatcode(code: str, var_vals: dict[str, dict[str, Any]],
-               sep: str) -> str:
+def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
     lines = []
     for vname, info in var_vals.items():
         lines += [declare(vname, info)]
@@ -35,14 +34,16 @@ for __, ___ in globals().copy().items():
     _ += "%s" + __ + "%s" + str(___)
     print(_)
 """
+    sep = hex(hash(code))
     print_globals = print_globals.replace("%s", sep)
     lines += [code, print_globals]
-    return "\n".join(lines)
-
-
-def vars_eval(outcode: str, sep: str):
+    outcode = "\n".join(lines)
     with open("tmpcode/tmp.py", "w", encoding="utf-8") as f:
         f.write(outcode)
+    return sep
+
+
+def vars_eval(sep: str):
     result = subprocess.run([PYTHON_PATH, "tmpcode/tmp.py"],
                             capture_output=True)
     stderr = result.stderr.decode(errors='ignore').replace("\r\n", "\n")
@@ -81,8 +82,7 @@ def vars_eval(outcode: str, sep: str):
 
 
 def full_eval(code: str, var_vals: dict[str, dict[str, Any]]):
-    sep = hex(hash(code))
-    outcode = formatcode(code, var_vals, sep)
-    new_var_vals = vars_eval(outcode, sep)
+    sep = gen_code(code, var_vals)
+    new_var_vals = vars_eval(sep)
     update_vars(var_vals, new_var_vals)
     return var_vals

@@ -1,4 +1,3 @@
-
 import ast
 import subprocess
 from typing import Any
@@ -28,8 +27,7 @@ def declare(vname: str, info: dict[str, Any]):
     return line
 
 
-def formatcode(code: str, var_vals: dict[str, dict[str, Any]],
-               sep: str) -> str:
+def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
     lines = []
     for vname, info in var_vals.items():
         lines += [declare(vname, info)]
@@ -48,30 +46,35 @@ for name, value in pairs(_G) do
                 _ = _ .. tostring(t_value) .. ","
             end
         end
-        _ = _:sub(1,-2) .. "]"
+        _ = _:sub(1, -2) .. "]"
+    elseif type(value) == "number" then
+        _ = math.type(value) .. "%s" .. name .. "%s" .. tostring(value)
     else
         _ = type(value) .. "%s" .. name .. "%s" .. tostring(value)
     end
     if name ~= "_" then print(_) end
 end
 """
+    sep = hex(hash(code))
     print_G = print_G.replace("%s", sep)
     lines += [code, print_G]
-    return "\n".join(lines)
-
-
-def vars_eval(outcode: str, sep: str):
+    outcode = "\n".join(lines)
     with open("tmpcode/tmp.lua", "w", encoding="utf-8") as f:
         f.write(outcode)
+    return sep
+
+
+def vars_eval(sep: str):
+    #run lua code, print stdout and stderr
     result = subprocess.run([LUA_PATH, "tmpcode/tmp.lua"], capture_output=True)
     stderr = result.stderr.decode(errors='ignore').replace("\r\n", "\n")
     print(stderr, end="")
-
     stdout = result.stdout.decode(errors='ignore').replace("\r\n", "\n")
     stdout, _, _G = stdout.partition(sep)
     _G = _G.split("\n")
     print(stdout, end="")
 
+    #extract global variables
     _VERSION = _G.pop(1)
     var_vals = {}
     for line in _G:
@@ -79,7 +82,7 @@ def vars_eval(outcode: str, sep: str):
         if len(line.split(sep)) != 3:
             raise NotImplementedError(line.split(sep))
         vtype, vname, data = line.split(sep)
-        if vname in {
+        if vname in [
                 "string", "xpcall", "package", "tostring", "print", "os",
                 "unpack", "require", "getfenv", "setmetatable", "next",
                 "assert", "tonumber", "io", "rawequal", "collectgarbage",
@@ -87,24 +90,22 @@ def vars_eval(outcode: str, sep: str):
                 "debug", "pcall", "table", "newproxy", "type", "coroutine",
                 "_G", "select", "gcinfo", "pairs", "rawget", "loadstring",
                 "ipairs", "_VERSION", "dofile", "setfenv", "error", "loadfile"
-        } | {"_"}:
+        ]:
             continue
         match vtype:
-            case "number":
-                if "." in data: data = float(data)
-                else: data = int(data)
+            case "integer":
+                data = int(data)
+            case "float":
+                data = float(data)
             case "string":
                 data = data
-            case "nil" :
+            case "nil":
                 data = None
-            case "boolean" :
+            case "boolean":
                 data = data == "true"
             case "table[number]" | "table[string]":
                 data = ast.literal_eval(data)
             case _:
-                if _VERSION >= "Lua 5.3":
-                    raise NotImplementedError(
-                        "new lua has actual integers and floats")
                 raise NotImplementedError(line.split(sep))
         vtype = ["", vtype, ""]
         var_vals[vname] = {"lang": "lua", "type": vtype, "value": data}
@@ -112,8 +113,7 @@ def vars_eval(outcode: str, sep: str):
 
 
 def full_eval(code: str, var_vals: dict[str, dict[str, Any]]):
-    sep = hex(hash(code))
-    outcode = formatcode(code, var_vals, sep)
-    new_var_vals = vars_eval(outcode, sep)
+    sep = gen_code(code, var_vals)
+    new_var_vals = vars_eval(sep)
     update_vars(var_vals, new_var_vals)
     return var_vals
