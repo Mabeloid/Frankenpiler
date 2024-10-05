@@ -1,11 +1,16 @@
 from typing import Any
 
+from config import LONG_IS_64BIT
 
-def cast_c(type: str, val: Any) -> Any:
-    match type:
+
+def cast_c(_type: str, val: Any) -> Any:
+    match _type:
         case "unsigned char":
             return int(val) % 256
         case "signed char":
+            if isinstance(val, str):
+                assert len(val) == 1
+                val = ord(val)
             val = int(val) % 256
             return val - 256 * (val > 127)
         case "unsigned int":
@@ -13,6 +18,17 @@ def cast_c(type: str, val: Any) -> Any:
         case "signed int":
             val = int(val) % 2**32
             return val - 2**32 * (val > (2**31 - 1))
+        case "signed long":
+            if LONG_IS_64BIT:
+                val = int(val) % 2**64
+                return val - 2**64 * (val > (2**63 - 1))
+            else:
+                val = int(val) % 2**32
+                return val - 2**32 * (val > (2**31 - 1))
+
+        case "signed long long":
+            val = int(val) % 2**64
+            return val - 2**64 * (val > (2**63 - 1))
         case "float":
             import struct
             return struct.unpack("f", struct.pack("f", val))[0]
@@ -21,9 +37,11 @@ def cast_c(type: str, val: Any) -> Any:
         case "signed char *":
             return str(val)
         case _:
-            if type[-1] == "*":
-                return [cast_c(type.rstrip(" *"), v) for v in val]
-            raise NotImplementedError(type)
+            if _type[-1] == "*":
+                _type = _type[:-1]
+                return [cast_c(_type.rstrip(" "), v) for v in val]
+            raise NotImplementedError(_type)
+
 
 def cast_lua(type: list[str], val: Any) -> Any:
     match type[0]:
@@ -41,6 +59,7 @@ def cast_lua(type: list[str], val: Any) -> Any:
             return [cast_lua(type[1:], v) for v in val]
         case _:
             raise NotImplementedError(type[0])
+
 
 def cast_python(type: list[str], val: Any) -> Any:
     match type[0]:

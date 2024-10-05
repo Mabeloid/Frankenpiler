@@ -1,0 +1,4 @@
+python  §print(__file__)
+python  §with open(__file__) as f:
+python  §    print("\n".join(f.read().split("\n")[:3]))
+python  §del f

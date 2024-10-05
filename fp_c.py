@@ -35,34 +35,6 @@ def formatvar(lang: str, types: list[str], value: Any) -> tuple[str, Any]:
             raise NotImplementedError("dictionaries!")
         case _:
             raise NotImplementedError("unknown type:", types, value)
-        # case "float *" | "int *":
-        #     arrstr = "{" + str(info['value'])[1:-1] + "}"
-        #     line = f"{_type} {vname}[{len(info['value'])}] = {arrstr};"
-
-        # case "list[float]":
-        #     arrstr = "{" + str(info['value'])[1:-1] + "}"
-        #     line = f"double {vname}[{len(info['value'])}] = {arrstr};"
-
-        # case "list[int]":
-        #     arrstr = "{" + str(info['value'])[1:-1] + "}"
-        #     line = f"long long {vname}[{len(info['value'])}] = {arrstr};"
-
-        # case "table[number]":
-        #     is_ints = all(x == round(x) for x in info['value'])
-        #     _type = ["double", "long long"][is_ints]
-        #     arrstr = "{" + str(info['value'])[1:-1] + "}"
-        #     line = f"{_type} {vname}[{len(info['value'])}] = {arrstr};"
-
-        # case "char **" | "table[string]" | "list[str]":
-        #     raise TypeError("arrays of strings do not " +
-        #                     "show up in gdb due to having " +
-        #                     "double pointers so their value " +
-        #                     "can't be read by the program")
-        #     arrstr = "{" + str(info['value'])[1:-1] + "}"
-        #     line = f"char * {vname}[] = {arrstr};"
-
-        # case _:
-        #     raise NotImplementedError(_type, vname, info)
 
 
 def declare(vname: str, info: dict[str, Any]):
@@ -104,19 +76,24 @@ def parsegdb(vtype: str, line: str) -> Any:
         case "signed char *":
             if line[:2] == "0x": data = line.split(" ")[1][1:-1]
             else: data = gcd_repeatstimes(line)
+        case "signed char **":
+            line = line[1:-1]
+            data = []
+            for element in line.split(', '):
+                if element[:2] == "0x":
+                    data.append(element.split(" ")[1][1:-1])
+                else:
+                    raise NotImplementedError(
+                        f"signed char ** contains too long string: {element}")
         case "float" | "double":
             data = float(line)
-        case "long long" | "long" | "signed int":
+        case "signed long long" | "signed long" | "signed int":
             data = int(line)
         case "void *":
             if line == "(void *) 0x0": data = None
             else: raise NotImplementedError(vtype, line)
-        case "int *":
+        case "signed int *" | "signed long *" | "signed long long *" | "double *" | "float *":
             data = ast.literal_eval("[" + line[1:-1] + "]")
-        case "long long *":
-            data = ast.literal_eval("[" + line[1:-1] + "]")
-        case "float *" | "double *":
-            data = [float(v) for v in ast.literal_eval("[" + line[1:-1] + "]")]
         case _:
             raise NotImplementedError(vtype, line)
     return data
@@ -155,7 +132,9 @@ def compile_eval(outcode: str, _vars: dict[str, dict[str, Any]]):
         [GCC_PATH, "-g", "-O0", "tmpcode/tmp.c", "-o", "tmpcode/tmp.exe"],
         capture_output=True)
     stderr = result.stderr.decode(errors='ignore').replace("\r\n", "\n")
-    if stderr: raise SystemError("GCC failed to compile:\n\n" + stderr)
+    print(stderr, end="")
+    if result.returncode:
+        raise SystemError(f"GCC return code {result.returncode}")
 
     #run compiled to extract stdout and stderr
     result = subprocess.run("tmpcode/tmp.exe", capture_output=True)
@@ -172,7 +151,8 @@ def compile_eval(outcode: str, _vars: dict[str, dict[str, Any]]):
                             input=_input,
                             capture_output=True)
     stderr = result.stderr.decode(errors='ignore').replace("\r\n", "\n")
-    if False: print(stderr, end="")
+    if result.returncode:
+        raise SystemError(f"GDB return code {result.returncode}")
 
     stdout = result.stdout.decode(errors='ignore')
     outputs = [l for l in stdout.split("\n") if l.startswith("(gdb) ")]

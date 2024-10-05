@@ -9,8 +9,8 @@ from fp_update_vars import update_vars
 def formatvar(types: list[str], value: Any) -> str:
     _type, *subtypes = types
     match _type:
-        case "int" |  "signed int" | "integer" | "float" |  "double" | "signed char" |  \
-            "bool" | "boolean" | "NoneType" | "nil":
+        case "signed int" | "signed long" | "signed long long" | "int" | "integer" | \
+            "float" |  "double" | "signed char" | "bool" | "boolean" | "NoneType" | "nil":
             return str(value)
         case "signed char *" | "string" | "str":
             return f"'{value}'"
@@ -18,14 +18,22 @@ def formatvar(types: list[str], value: Any) -> str:
             pieces = [formatvar(subtypes, v) for v in value]
             return "[" + ", ".join(pieces) + "]"
         case "dict":
-            pieces = [formatvar(subtypes[0:1], k) + ": " + formatvar(subtypes[1:2], v) for k,v in value.items()]
+            pieces = [
+                formatvar(subtypes[0:1], k) + ": " +
+                formatvar(subtypes[1:2], v) for k, v in value.items()
+            ]
             return "{" + ", ".join(pieces) + "}"
         case _:
+            if _type.endswith("*"):
+                _type = _type[:-1].rstrip(" ")
+                pieces = [formatvar([_type], v) for v in value]
+                return "[" + ", ".join(pieces) + "]"
+
             raise NotImplementedError("unknown type:", types, _type)
 
 
 def declare(vname: str, info: dict[str, Any]):
-    return f"{vname} = {formatvar(info["type"], info["value"])}"
+    return f"{vname} = {formatvar(info['type'], info['value'])}"
 
 
 def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
@@ -49,6 +57,8 @@ def vars_eval(sep: str):
                             capture_output=True)
     stderr = result.stderr.decode(errors='ignore').replace("\r\n", "\n")
     print(stderr, end="")
+    if result.returncode:
+        raise SystemError(f"Python return code {result.returncode}")
 
     stdout = result.stdout.decode(errors='ignore').replace("\r\n", "\n")
     stdout, _, _globals = stdout.partition(sep)
@@ -66,11 +76,10 @@ def vars_eval(sep: str):
             continue
 
         vtype = vtype.split("|")
-        if not all(
-            t in ["int",
-                  "str", "float", "bool", "NoneType", "list", "dict"]
-            for t in vtype):
-                raise NotImplementedError(vtype)
+        if not all(t in
+                   ["int", "str", "float", "bool", "NoneType", "list", "dict"]
+                   for t in vtype):
+            raise NotImplementedError(f"unknown type: {vtype}")
         if vtype != ["str"]: data = ast.literal_eval(data)
         var_vals[vname] = {"lang": "python", "type": vtype, "value": data}
     return var_vals

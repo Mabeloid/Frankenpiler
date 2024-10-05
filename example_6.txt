@@ -1,0 +1,18 @@
+c       §char       A    = 'c'                  ;
+c       §char *     B    = "str"                ;
+c       §double     C    = 1.1                  ;
+c       §float      D    = 1.2                  ;
+c       §int        E    = 4294967297           ;
+c       §long       F    = 4294967298           ;
+c       §long long  G    = 9223372036854775809  ;
+c       §char       A2[] ={'c'        , 'd'   } ;
+c       §char *     B2[] ={"str"              } ;
+c       §double     C2[] ={1.1                } ;
+c       §float      D2[] ={1.2                } ;
+c       §int        E2[] ={4294967297         } ;
+c       §long       F2[] ={4294967298         } ;
+c       §long long  G2[] ={9223372036854775809} ;
+python  §print(A ,B ,C ,D ,E ,F ,G ,sep="\t")
+python  §print(A2,B2   ,C2   ,D2   ,E2   ,F2   ,G2   ,sep="\t")
+lua     §print(A ,B ,C ,D ,E ,F ,G )
+lua     §print(A2,B2[1],C2[1],D2[1],E2[1],F2[1],G2[1])

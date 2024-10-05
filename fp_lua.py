@@ -9,7 +9,8 @@ from fp_update_vars import update_vars
 def formatvar(types: list[str], value: Any) -> str:
     _type, *subtypes = types
     match _type:
-        case "int" | "signed int" | "integer" | "float" | "double" | "signed char":
+        case "signed int" | "signed long" | "signed long long" | \
+            "signed char" | "int" | "integer" | "float" | "double" :
             return str(value)
         case "bool" | "boolean":
             return str(value).lower()
@@ -28,6 +29,10 @@ def formatvar(types: list[str], value: Any) -> str:
             ]
             return "{" + ", ".join(pieces) + "}"
         case _:
+            if _type[-1] == "*":
+                _type = _type[:-1].rstrip(" ")
+                pieces = [formatvar([_type], v) for v in value]
+                return "{" + ", ".join(pieces) + "}"
             raise NotImplementedError("unknown type:", types)
 
 
@@ -56,6 +61,8 @@ def vars_eval(sep: str):
     result = subprocess.run([LUA_PATH, "tmpcode/tmp.lua"], capture_output=True)
     stderr = result.stderr.decode(errors='ignore').replace("\r\n", "\n")
     print(stderr, end="")
+    if result.returncode:
+        raise SystemError(f"Lua return code {result.returncode}")
     stdout = result.stdout.decode(errors='ignore').replace("\r\n", "\n")
     stdout, _, _G = stdout.partition(sep)
     _G = _G.split("\n")

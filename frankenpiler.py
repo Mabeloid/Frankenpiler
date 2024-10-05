@@ -39,7 +39,6 @@ class FrankenPiler:
                  args: Optional[str | list[str]] = None) -> None:
 
         if args: raise NotImplementedError("args")
-        if not True: os.system("cls")
 
         codes = self.readcode(filepath)
         os.makedirs("tmpcode", exist_ok=True)
@@ -67,6 +66,7 @@ class FrankenPiler:
 
 
 if __name__ == "__main__":
-    for i in range(6):
+    os.system("cls")
+    for i in [6] or range(8):
         print((" " + str(i) + " ").center(50, "="))
         FrankenPiler("example_%d.txt" % i)
