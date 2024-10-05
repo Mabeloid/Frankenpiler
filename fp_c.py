@@ -28,7 +28,10 @@ def formatvar(lang: str, types: list[str], value: Any) -> tuple[str, Any]:
         case "signed char *" | "string" | "str":
             return "char * %s", '"' + value + '"'
         case "list" | "table":
-            raise NotImplementedError("lists or tables!")
+            formats = [formatvar(lang, subtypes, v) for v in value]
+            _format = formats[0][0] % "%s[]"
+            pieces = [str(f[1]) for f in formats]
+            return _format, "{" + ", ".join(pieces) + "}"
         case "dict":
             raise NotImplementedError("dictionaries!")
         case _:
