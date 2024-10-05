@@ -65,6 +65,8 @@ def cast_python(type: list[str], val: Any) -> Any:
     match type[0]:
         case "int":
             return int(val)
+        case "float":
+            return float(val)
         case "str":
             return str(val)
         case "bool":

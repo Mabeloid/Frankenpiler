@@ -20,4 +20,4 @@ lua     §print(A ,B ,C ,D ,E ,F ,G )
 lua     §print(A2,B2[1],C2[1],D2[1],E2[1],F2[1],G2[1])
 c       §puts("\nc");
 c       §printf("%c\t%s\t%lf\t%f\t%d\t%ld\t%lld\n", A, B, C, D, E, F, G);
-c       §printf("%s\t%s\t%lf\t%f\t%d\t%ld\t%lld", A2, B2[0], C2[0], D2[0], E2[0], F2[0], G2[0]);
+c       §printf("%s\t%s\t%lf\t%f\t%d\t%ld\t%lld\n", A2, B2[0], C2[0], D2[0], E2[0], F2[0], G2[0]);

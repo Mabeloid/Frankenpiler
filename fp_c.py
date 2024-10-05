@@ -99,6 +99,10 @@ def parsegdb(vtype: str, line: str) -> Any:
         case "void *":
             if line == "(void *) 0x0": data = None
             else: raise NotImplementedError(vtype, line)
+        case "void **":
+            elems = line[1:-1].split(", ")
+            if all(e == "0x0" for e in elems): data = [None] * len(elems)
+            else: raise NotImplementedError(vtype, line)
         case "signed int *" | "signed long *" | "signed long long *" | "double *" | "float *":
             data = ast.literal_eval("[" + line[1:-1] + "]")
         case _:
