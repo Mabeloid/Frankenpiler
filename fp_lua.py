@@ -62,9 +62,10 @@ def vars_eval(sep: str):
     #run lua code, print stdout and stderr
     result = subprocess.run([LUA_PATH, "tmpcode/tmp.lua"], capture_output=True)
     stderr = result.stderr.decode(errors='ignore').replace("\r\n", "\n")
-    print(stderr, end="")
     if result.returncode:
-        raise SystemError(f"Lua return code {result.returncode}")
+        print(stderr)
+        print(f"Lua return code {result.returncode}")
+        exit()
     stdout = result.stdout.decode(errors='ignore').replace("\r\n", "\n")
     stdout, _, _G = stdout.partition(sep)
     _G = _G.split("\n")

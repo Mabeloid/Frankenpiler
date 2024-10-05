@@ -67,6 +67,6 @@ class FrankenPiler:
 
 if __name__ == "__main__":
     os.system("cls")
-    for i in range(11):
+    for i in range(10, 11):
         print((" " + str(i) + " ").center(50, "="))
         FrankenPiler("examples/example_%d.txt" % i)

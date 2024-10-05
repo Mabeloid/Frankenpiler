@@ -59,9 +59,10 @@ def vars_eval(sep: str):
     result = subprocess.run([PYTHON_PATH, "tmpcode/tmp.py"],
                             capture_output=True)
     stderr = result.stderr.decode(errors='ignore').replace("\r\n", "\n")
-    print(stderr, end="")
     if result.returncode:
-        raise SystemError(f"Python return code {result.returncode}")
+        print(stderr)
+        print(f"Python return code {result.returncode}")
+        exit()
 
     stdout = result.stdout.decode(errors='ignore').replace("\r\n", "\n")
     stdout, _, _globals = stdout.partition(sep)

@@ -59,18 +59,20 @@ def formatvar(lang: str, types: list[str], value: Any) -> tuple[str, Any]:
             raise NotImplementedError("unknown type:", types, value)
 
 
-def declare(vname: str, info: dict[str, Any]):
+def declare(vname: str, info: dict[str, Any]) -> str:
     l_side, r_side = formatvar(info["lang"], info["type"], info["value"])
     if l_side is None: return r_side % vname
     return f"{l_side % vname} = {r_side};"
 
 
 def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
-    lines = ["#include <stdio.h>", "#include <string.h>", "int main(){"]
+    if r'\"' in code:
+        raise NotImplementedError(
+            "not confident that backslashes are handled right")
+    lines = ["#include <stdio.h>", "#include <string.h>"]
     for vname, info in var_vals.items():
-        lines += [declare(vname, info)]
-    assert not (r'\"' in code)
-    lines += [code, "}"]
+        lines.append(declare(vname, info))
+    lines += ["int main(){", code, "}"]
     outcode = "\n".join(lines)
     with open("tmpcode/tmp.c", "w", encoding="utf-8") as f:
         f.write(outcode)
@@ -132,6 +134,7 @@ def findvars() -> dict[str, list[str]]:
                    capture_output=True)
     tree = etree.parse('tmpcode/tmp.c.dump', parser=None)
     tokens = tree.getroot().find("dump").find("tokenlist")
+    globalscope = [*tokens][0].attrib["scope"]
     mainscope = [*tokens][-1].attrib["scope"]
 
     _vars = {}
@@ -142,8 +145,10 @@ def findvars() -> dict[str, list[str]]:
         if vname in "({": bracketing += 1
         elif vname in "})": bracketing -= 1
 
-        if not (a["scope"] == mainscope and a.get("variable")): continue
-        if (bracketing != 0) or _vars.get(vname): continue
+        if _vars.get(vname) or not a.get("variable"): continue
+        if not ((a["scope"] == globalscope and bracketing == -1) or
+                (a["scope"] == mainscope and bracketing == 0)):
+            continue
         type_fields = [
             a.get("valueType-sign", ""), a["valueType-type"],
             int(a.get("valueType-pointer", "0")) * "*"
@@ -159,9 +164,10 @@ def compile_eval(outcode: str, _vars: dict[str, dict[str, Any]]):
         [GCC_PATH, "-g", "-O0", "tmpcode/tmp.c", "-o", "tmpcode/tmp.exe"],
         capture_output=True)
     stderr = result.stderr.decode(errors='ignore').replace("\r\n", "\n")
-    print(stderr, end="")
     if result.returncode:
-        raise SystemError(f"GCC return code {result.returncode}")
+        print(stderr)
+        print(f"GCC return code {result.returncode}")
+        exit()
 
     #run compiled to extract stdout and stderr
     result = subprocess.run("tmpcode/tmp.exe", capture_output=True)
@@ -179,7 +185,9 @@ def compile_eval(outcode: str, _vars: dict[str, dict[str, Any]]):
                             capture_output=True)
     stderr = result.stderr.decode(errors='ignore').replace("\r\n", "\n")
     if result.returncode:
-        raise SystemError(f"GDB return code {result.returncode}")
+        print(stderr)
+        print(f"GDB return code {result.returncode}")
+        exit()
 
     stdout = result.stdout.decode(errors='ignore')
     outputs = [l for l in stdout.split("\n") if l.startswith("(gdb) ")]
