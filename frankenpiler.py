@@ -19,7 +19,7 @@ class FrankenPiler:
         for line in sourcelines:
             if not line: continue
             lang, _, code = line.partition("§")
-            lang = lang.rstrip("\t ")
+            lang = lang.rstrip("\t ").lower()
             lines.append([lang, code])
 
         #merge same-language code

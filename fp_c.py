@@ -10,36 +10,40 @@ from fp_update_vars import update_vars
 def formatvar(lang: str, types: list[str], value: Any) -> tuple[str, Any]:
     _type, *subtypes = types
     match _type:
-        case "char" | "double" | "long" | "long long":
-            return _type, value
+        case "signed char" | "signed int" | "signed long" | "signed long long" | "double":
+            return _type + " %s", value
         case "int":
-            if lang in ["python"]:
-                _type = "long long"
-            return _type, value
+            return _type + " %s", value
         case "integer":
-            return "long long", value
+            return "long long %s", value
         case "float":
             if lang in ["python", "lua"]:
                 _type = "double"
-            return _type, value
+            return _type + " %s", value
         case "bool" | "boolean":
-            return "int", int(value)
+            return "int %s", int(value)
         case "NoneType" | "nil":
-            return "void *", "NULL"
+            return "void * %s", "NULL"
 
-        case "char *" | "string" | "str":
-            return "char *", '"' + value + '"'
+        case "signed char *" | "string" | "str":
+            return "char * %s", '"' + value + '"'
         case "list" | "table":
             raise NotImplementedError("lists or tables!")
         case "dict":
             raise NotImplementedError("dictionaries!")
         case _:
+            if _type[-1] == "*":
+                _type = _type[:-1].rstrip(" ")
+                formats = [formatvar("c", [_type], v) for v in value]
+                _format = formats[0][0] % "%s[]"
+                pieces = [str(f[1]) for f in formats]
+                return _format, "{" + ", ".join(pieces) + "}"
             raise NotImplementedError("unknown type:", types, value)
 
 
 def declare(vname: str, info: dict[str, Any]):
-    _type, value = formatvar(info["lang"], info["type"], info["value"])
-    return f"{_type} {vname} = {value};"
+    l_side, r_side = formatvar(info["lang"], info["type"], info["value"])
+    return f"{l_side % vname} = {r_side};"
 
 
 def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
