@@ -6,7 +6,7 @@ from config import PYTHON_PATH
 from fp_update_vars import update_vars
 
 
-def formatvar(types: list[str], value: Any) -> str:
+def formatvar(lang, types: list[str], value: Any) -> str:
     _type, *subtypes = types
     match _type:
         case "signed int" | "signed long" | "signed long long" | "int" | "integer" | \
@@ -14,26 +14,29 @@ def formatvar(types: list[str], value: Any) -> str:
             return str(value)
         case "signed char *" | "string" | "str":
             return f"'{value}'"
-        case "table" | "list":
-            pieces = [formatvar(subtypes, v) for v in value]
+        case "table":
+            _type = ["list", "dict"][isinstance(value, dict)]
+            return formatvar(lang, [_type, *subtypes], value)
+        case "list":
+            pieces = [formatvar(lang, subtypes, v) for v in value]
             return "[" + ", ".join(pieces) + "]"
         case "dict":
             pieces = [
-                formatvar(subtypes[0:1], k) + ": " +
-                formatvar(subtypes[1:2], v) for k, v in value.items()
+                formatvar(lang, subtypes[0:1], k) + ": " +
+                formatvar(lang, subtypes[1:2], v) for k, v in value.items()
             ]
             return "{" + ", ".join(pieces) + "}"
         case _:
             if _type.endswith("*"):
                 _type = _type[:-1].rstrip(" ")
-                pieces = [formatvar([_type], v) for v in value]
+                pieces = [formatvar(lang, [_type], v) for v in value]
                 return "[" + ", ".join(pieces) + "]"
 
             raise NotImplementedError("unknown type:", types, _type)
 
 
 def declare(vname: str, info: dict[str, Any]):
-    return f"{vname} = {formatvar(info['type'], info['value'])}"
+    return f"{vname} = {formatvar(info['lang'], info['type'], info['value'])}"
 
 
 def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
@@ -88,5 +91,5 @@ def vars_eval(sep: str):
 def full_eval(code: str, var_vals: dict[str, dict[str, Any]]):
     sep = gen_code(code, var_vals)
     new_var_vals = vars_eval(sep)
-    update_vars(var_vals, new_var_vals)
+    update_vars("python", var_vals, new_var_vals)
     return var_vals

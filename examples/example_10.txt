@@ -1,0 +1,8 @@
+python  §colors = {10: "green", 25: "blue", 50: "red", 75: "yellow", 100: "black"}
+python  §print(f"python: {colors = }")
+lua     §score = 50
+lua     §print(("lua:    colors[%d] = %s"):format(score, colors[score]))
+c       §score = 25;
+c       §printf("c:      colors(%d) = %s\n", score, colors(score));
+python  §score = 75
+python  §print(f"python: colors[{score}] = {colors[score]}")

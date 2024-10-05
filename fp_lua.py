@@ -6,7 +6,7 @@ from config import LUA_PATH
 from fp_update_vars import update_vars
 
 
-def formatvar(types: list[str], value: Any) -> str:
+def formatvar(lang:str, types: list[str], value: Any) -> str:
     _type, *subtypes = types
     match _type:
         case "signed int" | "signed long" | "signed long long" | \
@@ -18,26 +18,28 @@ def formatvar(types: list[str], value: Any) -> str:
             return "nil"
         case "signed char *" | "string" | "str":
             return f"'{value}'"
-        case "table" | "list":
-            pieces = [formatvar(subtypes, v) for v in value]
+        case "table":
+            _type = ["list", "dict"][isinstance(value, dict)]
+            return formatvar(lang, [_type, *subtypes], value)
+        case "list":
+            pieces = [formatvar(lang, subtypes, v) for v in value]
             return "{" + ", ".join(pieces) + "}"
         case "dict":
-            raise NotImplementedError("python dict in lua")
             pieces = [
-                formatvar(subtypes[0:1], k) + "=" +
-                formatvar(subtypes[1:2], v) for k, v in value.items()
+                f"[{formatvar(lang, subtypes[0:1], k)}]=" +
+                formatvar(lang, subtypes[1:2], v) for k, v in value.items()
             ]
             return "{" + ", ".join(pieces) + "}"
         case _:
             if _type[-1] == "*":
                 _type = _type[:-1].rstrip(" ")
-                pieces = [formatvar([_type], v) for v in value]
+                pieces = [formatvar(lang, [_type], v) for v in value]
                 return "{" + ", ".join(pieces) + "}"
             raise NotImplementedError("unknown type:", types)
 
 
 def declare(vname: str, info: dict[str, Any]):
-    return f"{vname} = {formatvar(info['type'], info['value'])}"
+    return f"{vname} = {formatvar(info["lang"], info['type'], info['value'])}"
 
 
 def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
@@ -87,6 +89,9 @@ def vars_eval(sep: str):
 
         vtype = vtype.split("|")
         data = ast.literal_eval(data)
+        if (vtype[0:2] == ["table","integer"]) and all(k==i for k,i in zip(data.keys(), range(1, len(data.keys())))):
+                del vtype[1]
+                data = [*data.values()]
         var_vals[vname] = {"lang": "lua", "type": vtype, "value": data}
     return var_vals
 
@@ -94,5 +99,5 @@ def vars_eval(sep: str):
 def full_eval(code: str, var_vals: dict[str, dict[str, Any]]):
     sep = gen_code(code, var_vals)
     new_var_vals = vars_eval(sep)
-    update_vars(var_vals, new_var_vals)
+    update_vars("lua", var_vals, new_var_vals)
     return var_vals

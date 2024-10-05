@@ -15,25 +15,40 @@ def formatvar(lang: str, types: list[str], value: Any) -> tuple[str, Any]:
         case "int":
             return _type + " %s", value
         case "integer":
-            return "long long %s", value
+            return "signed long long %s", value
         case "float":
             if lang in ["python", "lua"]:
                 _type = "double"
             return _type + " %s", value
         case "bool" | "boolean":
-            return "int %s", int(value)
+            return "signed int %s", int(value)
         case "NoneType" | "nil":
             return "void * %s", "NULL"
 
         case "signed char *" | "string" | "str":
-            return "char * %s", '"' + value + '"'
-        case "list" | "table":
+            return "signed char * %s", '"' + value + '"'
+        case "table":
+            _type = ["list", "dict"][isinstance(value, dict)]
+            return formatvar(lang, [_type, *subtypes], value)
+        case "list":
             formats = [formatvar(lang, subtypes, v) for v in value]
             _format = formats[0][0] % "%s[]"
             pieces = [str(f[1]) for f in formats]
             return _format, "{" + ", ".join(pieces) + "}"
         case "dict":
-            raise NotImplementedError("dictionaries!")
+            k, v = [*value.items()][0]
+            intype = (formatvar(lang, subtypes[0:1], k)[0] % "").rstrip(" ")
+            outtype = (formatvar(lang, subtypes[1:2], v)[0] % "").rstrip(" ")
+            if intype == "signed char *":
+                raise NotImplementedError(
+                    "dict with string (char *) keys in c, add strcmp")
+            lines = [f"{outtype} %s({intype} k)", "{switch (k) {"]
+            for k, v in value.items():
+                lines.append(
+                    f"case {formatvar(lang, [intype], k)[1]}: return {formatvar(lang, [outtype], v)[1]};"
+                )
+            lines.append("}}")
+            return None, "\n".join(lines)
         case _:
             if _type[-1] == "*":
                 _type = _type[:-1].rstrip(" ")
@@ -46,6 +61,7 @@ def formatvar(lang: str, types: list[str], value: Any) -> tuple[str, Any]:
 
 def declare(vname: str, info: dict[str, Any]):
     l_side, r_side = formatvar(info["lang"], info["type"], info["value"])
+    if l_side is None: return r_side % vname
     return f"{l_side % vname} = {r_side};"
 
 
@@ -76,12 +92,12 @@ def parsegdb(vtype: str, line: str) -> Any:
             elif len(L) == 4: data += chr(int(L[1:], 8)) * count
             else: raise NotImplementedError(part)
         return data
-
     match vtype:
         case "signed char":
             data = int(line.split(" ")[0])
         case "signed char *":
-            if line[:2] == "0x": data = line.split(" ")[1][1:-1]
+            line = line.removeprefix("(signed char *) ")
+            if line.startswith("0x"): data = line.partition('"')[2][:-1]
             else: data = gcd_repeatstimes(line)
         case "signed char **":
             line = line[1:-1]
@@ -179,5 +195,5 @@ def full_eval(code: str, var_vals: dict[str, dict[str, Any]]):
     outcode = gen_code(code, var_vals)
     _vars = findvars()
     new_var_vals = compile_eval(outcode, _vars)
-    update_vars(var_vals, new_var_vals)
+    update_vars("c", var_vals, new_var_vals)
     return var_vals

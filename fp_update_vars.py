@@ -61,8 +61,9 @@ def cast_lua(type: list[str], val: Any) -> Any:
             raise NotImplementedError(type[0])
 
 
-def cast_python(type: list[str], val: Any) -> Any:
-    match type[0]:
+def cast_python(types: list[str], val: Any) -> Any:
+    _type, *subtypes = types
+    match _type:
         case "int":
             return int(val)
         case "float":
@@ -74,11 +75,15 @@ def cast_python(type: list[str], val: Any) -> Any:
         case "NoneType":
             return None
         case "list":
-            return [cast_python(type[1:], v) for v in val]
+            return [cast_python(subtypes[0:1], v) for v in val]
         case "dict":
-            raise NotImplementedError("cast dict")
+            return {
+                cast_python(subtypes[0:1], k): cast_python(subtypes[1:2], v)
+                for k, v in val.items()
+            }
+            raise NotImplementedError("cast dict", subtypes)
         case _:
-            raise NotImplementedError(type[0])
+            raise NotImplementedError(types[0])
 
 
 def cast_var(info: dict[str, Any], newinfo: dict[str, Any]) -> Any:
@@ -92,7 +97,7 @@ def cast_var(info: dict[str, Any], newinfo: dict[str, Any]) -> Any:
             return cast_python(info["type"], val)
 
 
-def update_vars(var_vals: dict[str, dict[str, Any]],
+def update_vars(lang:str, var_vals: dict[str, dict[str, Any]],
                 new_var_vals: dict[str, dict[str, Any]]) -> None:
     for vname, newinfo in new_var_vals.items():
         if not vname in var_vals:
@@ -104,6 +109,7 @@ def update_vars(var_vals: dict[str, dict[str, Any]],
             info["value"] = newinfo["value"]
             continue
         info["value"] = cast_var(info, newinfo)
-    deleted_vars = [vname for vname in var_vals if not vname in new_var_vals]
-    for vname in deleted_vars:
-        del var_vals[vname]
+    deleted = {k:v for k,v in var_vals.items() if not k in new_var_vals}
+    for k,v in deleted.items():
+        if (lang == "c") and (v["type"][0] == "dict"): continue
+        del var_vals[k]
