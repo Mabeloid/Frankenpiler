@@ -1,8 +1,8 @@
 ```
-c           §char text[] = "!dlrow";
-lua         §text = text .. " olleH"
-python      §text = text[::-1]
-js          §console.log(text)
+c       §char text[] = "!dlrow";
+lua     §text = text .. " olleH"
+python  §text = text[::-1]
+js      §console.log(text)
 
 >>> Hello world!
 ```
