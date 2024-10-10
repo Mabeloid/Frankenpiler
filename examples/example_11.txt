@@ -1,0 +1,12 @@
+js      §age = 48
+js      §name = "Milly Belson"
+js      §probability = 0.22913
+js      §validity = true
+js      §numbers = [75, 24, 94]
+js      §joyeux = null
+python  §print(f"There is a {probability * 100}% chance that {name} is {age} years old today.")
+python  §print(f"You have chosen to{' NOT' * (not validity)} celebrate this.")
+python  §print(f"Their favorite numbers are {str(numbers[:-1])[1:-1]}, and {numbers[-1]}.")
+python  §print(f"{joyeux = }")
+js      §let undef
+js      §console.log(undef)

@@ -1,14 +1,15 @@
 import os
 from typing import Optional
-import fp_c, fp_lua, fp_python
+import fp_c, fp_js, fp_lua, fp_python
 
 
 class FrankenPiler:
 
     full_evals = {
         "c": fp_c.full_eval,
+        "js": fp_js.full_eval,
         "lua": fp_lua.full_eval,
-        "python": fp_python.full_eval
+        "python": fp_python.full_eval,
     }
 
     def readcode(self, filepath: str) -> list[list[str]]:
@@ -67,6 +68,9 @@ class FrankenPiler:
 
 if __name__ == "__main__":
     os.system("cls")
-    for i in range(11):
+    for i in range(11, 12):
+        FrankenPiler("examples/example_%d.txt" % i)
+    exit()
+    for i in range(0, 11):
         print((" " + str(i) + " ").center(50, "="))
         FrankenPiler("examples/example_%d.txt" % i)

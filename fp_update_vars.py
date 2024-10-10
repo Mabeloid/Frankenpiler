@@ -43,6 +43,22 @@ def cast_c(_type: str, val: Any) -> Any:
             raise NotImplementedError(_type)
 
 
+def cast_js(type: list[str], val: Any) -> Any:
+    match type[0]:
+        case "Number":
+            return float(val) if "." in str(val) else int(val)
+        case "String":
+            return str(val)
+        case "Boolean":
+            return bool(val)
+        case "Null":
+            return None
+        case "Array":
+            return [cast_js(type[1:], v) for v in val]
+        case _:
+            raise NotImplementedError(type[0])
+
+
 def cast_lua(type: list[str], val: Any) -> Any:
     match type[0]:
         case "integer":
@@ -91,13 +107,17 @@ def cast_var(info: dict[str, Any], newinfo: dict[str, Any]) -> Any:
     match info["lang"]:
         case "c":
             return cast_c(info["type"][0], val)
+        case "js":
+            return cast_js(info["type"], val)
         case "lua":
             return cast_lua(info["type"], val)
         case "python":
             return cast_python(info["type"], val)
+        case _:
+            raise NotImplementedError(f'unknown language: {info["lang"]}')
 
 
-def update_vars(lang:str, var_vals: dict[str, dict[str, Any]],
+def update_vars(lang: str, var_vals: dict[str, dict[str, Any]],
                 new_var_vals: dict[str, dict[str, Any]]) -> None:
     for vname, newinfo in new_var_vals.items():
         if not vname in var_vals:
@@ -109,7 +129,7 @@ def update_vars(lang:str, var_vals: dict[str, dict[str, Any]],
             info["value"] = newinfo["value"]
             continue
         info["value"] = cast_var(info, newinfo)
-    deleted = {k:v for k,v in var_vals.items() if not k in new_var_vals}
-    for k,v in deleted.items():
+    deleted = {k: v for k, v in var_vals.items() if not k in new_var_vals}
+    for k, v in deleted.items():
         if (lang == "c") and (v["type"][0] == "dict"): continue
         del var_vals[k]
