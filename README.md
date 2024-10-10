@@ -1,7 +1,8 @@
 ```
-c       §char text[] = "!dlrow";
-lua     §text = text .. " elloH"
-python  §print(text[::-1])
+c           §char text[] = "!dlrow";
+lua         §text = text .. " olleH"
+python      §text = text[::-1]
+js          §console.log(text)
 
 >>> Hello world!
 ```
@@ -17,6 +18,8 @@ requirements for running code in specific languages:
 
 - C: cppcheck, gdb, gcc
 
-- Python: python (shouldn't be an issue)
+- JavaScript: node.js
 
 - Lua: lua 5.3 or later
+
+- Python: python (shouldn't be an issue)

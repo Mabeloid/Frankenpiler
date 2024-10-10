@@ -15,12 +15,15 @@ class FrankenPiler:
     def readcode(self, filepath: str) -> list[list[str]]:
         with open(filepath, "r", encoding="utf-8") as f:
             sourcelines = f.read().split("\n")
+        
+        substitutions = {"javascript": "js"}
 
         lines: list[list[str]] = []
         for line in sourcelines:
             if not line: continue
             lang, _, code = line.partition("§")
             lang = lang.rstrip("\t ").lower()
+            lang = substitutions.get(lang, lang)
             lines.append([lang, code])
 
         #merge same-language code
@@ -69,6 +72,7 @@ class FrankenPiler:
 if __name__ == "__main__":
     os.system("cls")
     for i in range(11, 12):
+        print((" " + str(i) + " ").center(50, "="))
         FrankenPiler("examples/example_%d.txt" % i)
     exit()
     for i in range(0, 11):

@@ -1,3 +1,5 @@
-c		§char text[] = "!dlrow";
-lua 	§text = text .. " olleH"
-python  §print(text[::-1])
+c		§int count = 7;
+c		§char text[] = "Hello? Hello! Hi!";
+lua		§text = text:sub(8);
+python  §words = [text] * count
+python	§print(*words)

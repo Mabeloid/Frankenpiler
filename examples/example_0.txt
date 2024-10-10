@@ -1,5 +1,4 @@
-c		§int count = 7;
-c		§char text[] = "Hello? Hello! Hi!";
-lua		§text = text:sub(8);
-python  §words = [text] * count
-python	§print(*words)
+c       §char text[] = "!dlrow";
+lua     §text = text .. " olleH"
+python  §text = text[::-1]
+js      §console.log(text)
