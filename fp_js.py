@@ -1,6 +1,7 @@
 import ast
 import subprocess
 from typing import Any
+from datetime import datetime
 
 from config import JS_PATH
 from fp_update_vars import update_vars
@@ -8,23 +9,36 @@ from fp_update_vars import update_vars
 
 def formatvar(lang, types: list[str], value: Any) -> str:
     _type, *subtypes = types
-    
+
     match _type:
         case "signed int" | "signed long" | "signed long long" | "int" | "integer" | \
             "Number" | "float" |  "double" | "signed char":
             return str(value)
+        case "BigInt":
+            return f"{value}n"
         case "bool" | "boolean" | "Boolean":
             return str(value).lower()
         case "NoneType" | "nil" | "Null":
             return "null"
         case "signed char *" | "string" | "String" | "str":
             return f"'{value}'"
+        case "Date":
+            return f"new Date({value * 1000})"
         case "table":
             _type = ["list", "dict"][isinstance(value, dict)]
             return formatvar(lang, [_type, *subtypes], value)
         case "list" | "Array":
             pieces = [formatvar(lang, subtypes, v) for v in value]
             return "[" + ", ".join(pieces) + "]"
+        case "set" | "Set":
+            pieces = [formatvar(lang, subtypes, v) for v in value]
+            return "new Set([" + ", ".join(pieces) + "])"
+        case "Map" | "dict":
+            pieces = [
+                f"[{formatvar(lang, subtypes[0:1], k)}, {formatvar(lang, subtypes[1:2], v)}]"
+                for k, v in value.items()
+            ]
+            return "new Map([ " + ", ".join(pieces) + "])"
         case _:
             if _type.endswith("*"):
                 _type = _type[:-1].rstrip(" ")
@@ -77,8 +91,13 @@ def vars_eval(sep: str):
         ]:
             continue
         vtype = vtype.split("|")
-        if not all(t in ["Number", "String", "Null", "Boolean", "Array"] for t in vtype):
-            raise NotImplementedError(f"var '{vname}' has unknown type: {vtype}")
+        if not all(t in [
+                "Number", "BigInt", "String", "Null", "Boolean", "Array",
+                "Set", "Map", "Date"
+        ] for t in vtype):
+            raise NotImplementedError(
+                f"var '{vname}' has unknown type: {vtype}\nlooks like this: {data}"
+            )
         data = ast.literal_eval(data)
         var_vals[vname] = {"lang": "js", "type": vtype, "value": data}
     return var_vals

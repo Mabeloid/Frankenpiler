@@ -15,8 +15,11 @@ class FrankenPiler:
     def readcode(self, filepath: str) -> list[list[str]]:
         with open(filepath, "r", encoding="utf-8") as f:
             sourcelines = f.read().split("\n")
-        
-        substitutions = {"javascript": "js"}
+
+        substitutions = {
+            "javascript": "js",
+            "py": "python",
+        }
 
         lines: list[list[str]] = []
         for line in sourcelines:
@@ -71,10 +74,10 @@ class FrankenPiler:
 
 if __name__ == "__main__":
     os.system("cls")
-    for i in range(11, 12):
-        print((" " + str(i) + " ").center(50, "="))
-        FrankenPiler("examples/example_%d.txt" % i)
+    for s in ["c", "js", "lua", "py"][1:2]:
+        print((" " + s + " ").center(50, "="))
+        FrankenPiler("examples/example_%s.txt" % s)
     exit()
-    for i in range(0, 11):
+    for i in range(9):
         print((" " + str(i) + " ").center(50, "="))
         FrankenPiler("examples/example_%d.txt" % i)

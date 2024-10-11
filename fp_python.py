@@ -10,18 +10,23 @@ def formatvar(lang, types: list[str], value: Any) -> str:
     _type, *subtypes = types
     match _type:
         case "signed int" | "signed long" | "signed long long" | "int" | "integer" | \
-            "Number" | "float" |  "double" | "signed char" | \
+            "Number" | "BigInt" | "float" |  "double" | "signed char" | \
             "bool" | "boolean" | "Boolean" | "NoneType" | "nil" | "Null":
             return str(value)
         case "signed char *" | "string" | "String" | "str":
             return f"'{value}'"
+        case "Date":
+            return f"datetime.fromtimestamp({value})"
         case "table":
             _type = ["list", "dict"][isinstance(value, dict)]
             return formatvar(lang, [_type, *subtypes], value)
         case "list" | "Array":
             pieces = [formatvar(lang, subtypes, v) for v in value]
             return "[" + ", ".join(pieces) + "]"
-        case "dict":
+        case "set" | "Set":
+            pieces = [formatvar(lang, subtypes, v) for v in value]
+            return "{" + ", ".join(pieces) + "}"
+        case "dict" | "Map":
             pieces = [
                 formatvar(lang, subtypes[0:1], k) + ": " +
                 formatvar(lang, subtypes[1:2], v) for k, v in value.items()
@@ -41,7 +46,7 @@ def declare(vname: str, info: dict[str, Any]):
 
 
 def gen_code(code: str, var_vals: dict[str, dict[str, Any]]) -> str:
-    lines = []
+    lines = ["from datetime import datetime"]
     for vname, info in var_vals.items():
         lines += [declare(vname, info)]
     assert not (r'\"' in code)
@@ -81,7 +86,7 @@ def vars_eval(sep: str):
 
         vtype = vtype.split("|")
         if not all(t in
-                   ["int", "str", "float", "bool", "NoneType", "list", "dict"]
+                   ["int", "str", "float", "bool", "NoneType",  "datetime", "list", "dict", "set"]
                    for t in vtype):
             raise NotImplementedError(f"unknown type: {vtype}")
         if vtype != ["str"]: data = ast.literal_eval(data)

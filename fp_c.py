@@ -4,7 +4,7 @@ from lxml import etree
 import subprocess
 
 from config import CPPCHECK_PATH, GCC_PATH, GDB_PATH
-from fp_update_vars import update_vars
+from fp_update_vars import update_vars, cast_c
 
 
 def formatvar(lang: str, types: list[str], value: Any) -> tuple[str, Any]:
@@ -13,29 +13,36 @@ def formatvar(lang: str, types: list[str], value: Any) -> tuple[str, Any]:
         case "signed char" | "signed int" | "signed long" | "signed long long" | "double":
             return _type + " %s", value
         case "int":
+            if lang in ["python"]:
+                return "signed long long %s", cast_c("signed long long", value)
             return _type + " %s", value
-        case "integer":
-            return "signed long long %s", value
+        case "integer" | "BigInt":
+            return "signed long long %s", cast_c("signed long long", value)
+        case "Date":
+            return "double %s", value
         case "float":
             if lang in ["python", "lua"]:
                 _type = "double"
             return _type + " %s", value
-        case "bool" | "boolean":
+        case "Number":
+            if "." in str(value): return "double %s", value
+            return "signed long long %s", cast_c("signed long long", value)
+        case "bool" | "boolean" | "Boolean":
             return "signed int %s", int(value)
-        case "NoneType" | "nil":
+        case "NoneType" | "nil" | "Null":
             return "void * %s", "NULL"
-
-        case "signed char *" | "string" | "str":
+        case "signed char *" | "string" | "str" | "String":
             return "signed char * %s", '"' + value + '"'
+
         case "table":
             _type = ["list", "dict"][isinstance(value, dict)]
             return formatvar(lang, [_type, *subtypes], value)
-        case "list":
+        case "list" | "Array" | "Set":
             formats = [formatvar(lang, subtypes, v) for v in value]
             _format = formats[0][0] % "%s[]"
             pieces = [str(f[1]) for f in formats]
             return _format, "{" + ", ".join(pieces) + "}"
-        case "dict":
+        case "dict" | "Map":
             k, v = [*value.items()][0]
             intype = (formatvar(lang, subtypes[0:1], k)[0] % "").rstrip(" ")
             outtype = (formatvar(lang, subtypes[1:2], v)[0] % "").rstrip(" ")

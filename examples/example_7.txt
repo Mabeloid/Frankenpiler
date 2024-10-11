@@ -1,23 +1,8 @@
-c       §char       A    = '!'                  ;
-c       §char *     B    = "str"                ;
-c       §double     C    = 1.1                  ;
-c       §float      D    = 1.2                  ;
-c       §int        E    = 2147483647           ;
-c       §long       F    = 2147483648           ;
-c       §long long  G    = 9223372036854775808  ;
-c       §char       A2[] ={'h', 'i', '!'      } ;
-c       §char *     B2[] ={"str"              } ;
-c       §double     C2[] ={1.1                } ;
-c       §float      D2[] ={1.2                } ;
-c       §int        E2[] ={2147483647         } ;
-c       §long       F2[] ={2147483648         } ;
-c       §long long  G2[] ={9223372036854775808} ;
-python  §print("\npython")
-python  §print(A ,B ,C ,D ,E ,F ,G ,sep="\t")
-python  §print(A2,B2   ,C2   ,D2   ,E2   ,F2   ,G2   ,sep="\t")
-lua     §print("\nlua")
-lua     §print(A ,B ,C ,D ,E ,F ,G )
-lua     §print(A2,B2[1],C2[1],D2[1],E2[1],F2[1],G2[1])
-c       §puts("\nc");
-c       §printf("%c\t%s\t%lf\t%f\t%d\t%ld\t%lld\n", A, B, C, D, E, F, G);
-c       §printf("%s\t%s\t%lf\t%f\t%d\t%ld\t%lld\n", A2, B2[0], C2[0], D2[0], E2[0], F2[0], G2[0]);
+python  §colors = {10: "green", 25: "blue", 50: "red", 75: "yellow", 100: "black"}
+python  §print(f"python: {colors = }")
+lua     §score = 50
+lua     §print(("lua:    colors[%d] = %s"):format(score, colors[score]))
+c       §score = 25;
+c       §printf("c:      colors(%d) = %s\n", score, colors(score));
+python  §score = 75
+python  §print(f"python: colors[{score}] = {colors[score]}")

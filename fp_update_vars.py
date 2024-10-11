@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 from config import LONG_IS_64BIT
@@ -19,13 +20,8 @@ def cast_c(_type: str, val: Any) -> Any:
             val = int(val) % 2**32
             return val - 2**32 * (val > (2**31 - 1))
         case "signed long":
-            if LONG_IS_64BIT:
-                val = int(val) % 2**64
-                return val - 2**64 * (val > (2**63 - 1))
-            else:
-                val = int(val) % 2**32
-                return val - 2**32 * (val > (2**31 - 1))
-
+            _type = ["signed int", "signed long long"][LONG_IS_64BIT]
+            return cast_c(_type, val)
         case "signed long long":
             val = int(val) % 2**64
             return val - 2**64 * (val > (2**63 - 1))
@@ -43,24 +39,37 @@ def cast_c(_type: str, val: Any) -> Any:
             raise NotImplementedError(_type)
 
 
-def cast_js(type: list[str], val: Any) -> Any:
-    match type[0]:
+def cast_js(types: list[str], val: Any) -> Any:
+    _type, *subtypes = types
+    match _type:
         case "Number":
             return float(val) if "." in str(val) else int(val)
+        case "BigInt":
+            return int(val)
         case "String":
             return str(val)
         case "Boolean":
             return bool(val)
         case "Null":
             return None
+        case "Date":
+            return float(val)
         case "Array":
-            return [cast_js(type[1:], v) for v in val]
+            return [cast_js(subtypes, v) for v in val]
+        case "Set":
+            return {cast_js(subtypes, v) for v in val}
+        case "Map":
+            return {
+                cast_js(subtypes[0:1], k): cast_js(subtypes[1:2], v)
+                for k, v in val.items()
+            }
         case _:
-            raise NotImplementedError(type[0])
+            raise NotImplementedError(_type, val)
 
 
-def cast_lua(type: list[str], val: Any) -> Any:
-    match type[0]:
+def cast_lua(types: list[str], val: Any) -> Any:
+    _type, *subtypes = types
+    match _type:
         case "integer":
             return int(val)
         case "float":
@@ -72,9 +81,9 @@ def cast_lua(type: list[str], val: Any) -> Any:
         case "nil":
             return None
         case "table":
-            return [cast_lua(type[1:], v) for v in val]
+            return [cast_lua(subtypes, v) for v in val]
         case _:
-            raise NotImplementedError(type[0])
+            raise NotImplementedError(_type)
 
 
 def cast_python(types: list[str], val: Any) -> Any:
@@ -131,5 +140,9 @@ def update_vars(lang: str, var_vals: dict[str, dict[str, Any]],
         info["value"] = cast_var(info, newinfo)
     deleted = {k: v for k, v in var_vals.items() if not k in new_var_vals}
     for k, v in deleted.items():
-        if (lang == "c") and (v["type"][0] == "dict"): continue
+        #dict/Map is converted to a C function, undetectable but not actually deleted
+        if (lang == "c") and (v["type"][0] in ["dict", "Map"]): continue
+        #lua uses nil to delete variables, override if it got nil from other lang
+        if (lang == "lua") and (v["type"][0] in ["NoneType", "nil", "Null"]):
+            continue
         del var_vals[k]

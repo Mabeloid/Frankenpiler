@@ -1,0 +1,23 @@
+js      §A = 1000000000000000000000000000000000000000000000000000000000000000n
+js      §B = false
+js      §C = new Date()
+js      §D = null
+js      §E = 12
+js      §F = "hi!"
+js      §A2 = [0,1,2,3,4]
+js      §B2 = new Set([5,6,7,8,9])
+js      §C2 = new Map([ [1, "penny"], [5, "nickel"], [10, "dime"], [25, "quarter"]])
+lua     §print("\nlua")
+lua     §print(A, B, C, D, E, F)
+lua     §print(A2[1], "{...}", C2[10])
+python  §print("\npython")
+python  §print(A, B, C, D, E, F, sep="\t")
+python  §print(A2, B2, C2, sep="\n")
+c       §puts("\nc");
+c       §printf("%lld\t%d\t%d\t%s\t%lld\t%s\n", A, B, C, D, E, F);
+c       §printf("%lld\t%s\t%s\n", A2[3], "{...}", C2(25));
+js      §console.log("\njavascript")
+js      §console.log(A, B, C, D, E, F)
+js      §console.log(A2)
+js      §console.log(B2)
+js      §console.log(C2)

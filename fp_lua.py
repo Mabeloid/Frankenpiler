@@ -10,21 +10,22 @@ def formatvar(lang:str, types: list[str], value: Any) -> str:
     _type, *subtypes = types
     match _type:
         case "signed int" | "signed long" | "signed long long" | \
-            "signed char" | "int" | "integer" | "float" | "double" :
+            "signed char" | "int" | "integer" | "Number" | "BigInt" | \
+            "float" | "double" | "Date":
             return str(value)
-        case "bool" | "boolean":
+        case "bool" | "boolean" | "Boolean":
             return str(value).lower()
-        case "NoneType" | "nil":
+        case "NoneType" | "nil" | "Null":
             return "nil"
-        case "signed char *" | "string" | "str":
+        case "signed char *" | "string" | "str" | "String":
             return f"'{value}'"
         case "table":
             _type = ["list", "dict"][isinstance(value, dict)]
             return formatvar(lang, [_type, *subtypes], value)
-        case "list":
+        case "list" | "Array" | "Set":
             pieces = [formatvar(lang, subtypes, v) for v in value]
             return "{" + ", ".join(pieces) + "}"
-        case "dict":
+        case "dict" | "Map":
             pieces = [
                 f"[{formatvar(lang, subtypes[0:1], k)}]=" +
                 formatvar(lang, subtypes[1:2], v) for k, v in value.items()
@@ -35,7 +36,7 @@ def formatvar(lang:str, types: list[str], value: Any) -> str:
                 _type = _type[:-1].rstrip(" ")
                 pieces = [formatvar(lang, [_type], v) for v in value]
                 return "{" + ", ".join(pieces) + "}"
-            raise NotImplementedError("unknown type:", types)
+            raise NotImplementedError("unknown type:", types, value)
 
 
 def declare(vname: str, info: dict[str, Any]):
