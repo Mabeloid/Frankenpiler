@@ -2,5 +2,7 @@
 __pycache__
 tmpcode/*
 tempCodeRunnerFile.*
-*.ods
+table_maker.py
+conversion_table.txt
+*.xlsx
 .~lock*#
