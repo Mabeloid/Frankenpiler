@@ -3,20 +3,23 @@ python  §B  = 1.2
 python  §C  = 12
 python  §D  = "hi!"
 python  §E  = None
+python  §F  = datetime.now()
 python  §A2 = [True]
 python  §B2 = [3.4]
 python  §C2 = [34]
 python  §D2 = ["bye!"]
 python  §E2 = [None, None]
+python  §F2 = {"München", "Berlin"}
+python  §G2 = {i: "zero one two three four five six seven eight nine".split(" ")[i] for i in range(10)}
 c       §puts("\nc");
 c       §printf("%d\t%lf\t%lld\t%s\t%s\n", A, B, C, D, E);
-c       §printf("%d\t%lf\t%lld\t%s\t%s\n", A2[0], B2[0], C2[0], D2[0], E2[0]);
+c       §printf("%d\t%lf\t%lld\t%s\t%s\t%s\t%s\n", A2[0], B2[0], C2[0], D2[0], E2[0], "{...}", G2(5));
 lua     §print("\nlua")
-lua     §print(A ,B ,C ,D ,E)
-lua     §print(A2[1],B2[1],C2[1],D2[1],E2[1])
+lua     §print(A, B, C, D, E)
+lua     §print(A2[1], B2[1], C2[1], D2[1], E2[1], "{...}", G2[8])
 js      §console.log("\njavascript")
-js      §console.log(A ,B ,C ,D ,E)
-js      §console.log(A2,B2,C2,D2,E2)
+js      §console.log(A, B, C, D, E)
+js      §console.log(A2, B2, C2, D2, E2, F2, G2)
 python  §print("\npython")
-python  §print(A ,B ,C ,D ,globals().get("E", None), sep="\t")
-python  §print(A2,B2,C2,D2,E2       or [None, None], sep="\t")
+python  §print(A, B, C, D, E, sep="\t")
+python  §print(A2, B2, C2, D2, E2, F2, G2, sep="\t")

@@ -99,8 +99,12 @@ def cast_python(types: list[str], val: Any) -> Any:
             return bool(val)
         case "NoneType":
             return None
+        case "datetime":
+            return float(val)
         case "list":
             return [cast_python(subtypes[0:1], v) for v in val]
+        case "set":
+            return {cast_python(subtypes[0:1], v) for v in val}
         case "dict":
             return {
                 cast_python(subtypes[0:1], k): cast_python(subtypes[1:2], v)
@@ -143,6 +147,7 @@ def update_vars(lang: str, var_vals: dict[str, dict[str, Any]],
         #dict/Map is converted to a C function, undetectable but not actually deleted
         if (lang == "c") and (v["type"][0] in ["dict", "Map"]): continue
         #lua uses nil to delete variables, override if it got nil from other lang
-        if (lang == "lua") and (v["type"][0] in ["NoneType", "nil", "Null"]):
+        if (lang == "lua") and {*v["type"]}.intersection(
+            ["NoneType", "nil", "Null"]):
             continue
         del var_vals[k]

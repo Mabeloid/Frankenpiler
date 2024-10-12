@@ -7,7 +7,7 @@ js      §console.log(text)
 >>> Hello world!
 ```
 
-works for python versions 3.12 or later
+works in python versions 3.12 or later
 
 
 to install the required python library:
@@ -53,6 +53,7 @@ to install the required python library:
 | Lua  |table[U, V]|      V _(U)      |Map[U, V]|       -       | dict[U, V]|
 | Lua  |  table[U] |      U _[]       | Array[U]|       -       |  list[U]  |
 |Python|    bool   |       int        | Boolean |    boolean    |     -     |
+|Python|  datetime |      double      |   Date  |     float     |     -     |
 |Python| dict[U, V]|      V _(U)      |Map[U, V]|  table[U, V]  |     -     |
 |Python|   float   |      double      |  Number |     float     |     -     |
 |Python|    int    |    long long     |  Number |    integer    |     -     |
@@ -60,3 +61,11 @@ to install the required python library:
 |Python|  NoneType |   void * NULL    |   Null  |      nil      |     -     |
 |Python|   set[U]  |      U _[]       |  Set[U] |    table[U]   |     -     |
 |Python|    str    |      char *      |  String |     string    |     -     |
+
+## notes:
+
+- in general, only variables that are in the global scope at the end of runtime will be carried over
+
+- variables can be deleted in javascript with `delete x`, in python with `del x`, or in lua with `x = nil`
+
+- C (GDB) doesn't like it when an array (iterable) of strings gets too long, the limit seems to be two items

@@ -6,12 +6,15 @@ lua     §A2 = {true}
 lua     §B2 = {3.4}
 lua     §C2 = {34}
 lua     §D2 = {"bye!"}
+c       §puts("\nc");
+c       §printf("%d\t%lf\t%lld\t%s\n", A, B, C, D);
+c       §printf("%d\t%lf\t%lld\t%s\n", A2[0], B2[0], C2[0], D2[0]);
+js      §console.log("\njavascript")
+js      §console.log(A ,B ,C ,D ,sep="\t")
+js      §console.log(A2   ,B2   ,C2   ,D2   ,sep="\t")
 python  §print("\npython")
 python  §print(A ,B ,C ,D ,sep="\t")
 python  §print(A2   ,B2   ,C2   ,D2   ,sep="\t")
 lua     §print("\nlua")
 lua     §print(A ,B ,C ,D)
 lua     §print(A2[1],B2[1],C2[1],D2[1])
-c       §puts("\nc");
-c       §printf("%d\t%lf\t%lld\t%s\n", A, B, C, D);
-c       §printf("%d\t%lf\t%lld\t%s\n", A2[0], B2[0], C2[0], D2[0]);

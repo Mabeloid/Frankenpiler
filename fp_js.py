@@ -22,7 +22,7 @@ def formatvar(lang, types: list[str], value: Any) -> str:
             return "null"
         case "signed char *" | "string" | "String" | "str":
             return f"'{value}'"
-        case "Date":
+        case "Date" | "datetime":
             return f"new Date({value * 1000})"
         case "table":
             _type = ["list", "dict"][isinstance(value, dict)]

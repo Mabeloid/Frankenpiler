@@ -11,7 +11,7 @@ def formatvar(lang:str, types: list[str], value: Any) -> str:
     match _type:
         case "signed int" | "signed long" | "signed long long" | \
             "signed char" | "int" | "integer" | "Number" | "BigInt" | \
-            "float" | "double" | "Date":
+            "float" | "double" | "Date" | "datetime":
             return str(value)
         case "bool" | "boolean" | "Boolean":
             return str(value).lower()
@@ -22,7 +22,7 @@ def formatvar(lang:str, types: list[str], value: Any) -> str:
         case "table":
             _type = ["list", "dict"][isinstance(value, dict)]
             return formatvar(lang, [_type, *subtypes], value)
-        case "list" | "Array" | "Set":
+        case "list" | "Array" | "set" | "Set":
             pieces = [formatvar(lang, subtypes, v) for v in value]
             return "{" + ", ".join(pieces) + "}"
         case "dict" | "Map":

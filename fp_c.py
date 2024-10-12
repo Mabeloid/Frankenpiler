@@ -18,7 +18,7 @@ def formatvar(lang: str, types: list[str], value: Any) -> tuple[str, Any]:
             return _type + " %s", value
         case "integer" | "BigInt":
             return "signed long long %s", cast_c("signed long long", value)
-        case "Date":
+        case "Date" | "datetime":
             return "double %s", value
         case "float":
             if lang in ["python", "lua"]:
@@ -37,7 +37,7 @@ def formatvar(lang: str, types: list[str], value: Any) -> tuple[str, Any]:
         case "table":
             _type = ["list", "dict"][isinstance(value, dict)]
             return formatvar(lang, [_type, *subtypes], value)
-        case "list" | "Array" | "Set":
+        case "list" | "Array" | "set" | "Set":
             formats = [formatvar(lang, subtypes, v) for v in value]
             _format = formats[0][0] % "%s[]"
             pieces = [str(f[1]) for f in formats]

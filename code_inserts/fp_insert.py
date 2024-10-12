@@ -13,6 +13,9 @@ for name, value in frozenglobals:
     if isinstance(value, list):
         value = value or [None]
         s += "|" + type(value[0]).__name__
+    if isinstance(value, set):
+        value = value or {None}
+        s += "|" + type([*value][0]).__name__
     elif isinstance(value, dict):
         dkey, dval = ([*value.items()] or [[None, None]])[0]
         s += "|" + type(dkey).__name__

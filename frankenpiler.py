@@ -74,10 +74,9 @@ class FrankenPiler:
 
 if __name__ == "__main__":
     os.system("cls")
-    for s in ["c", "js", "lua", "py"][1:2]:
-        print((" " + s + " ").center(50, "="))
-        FrankenPiler("examples/example_%s.txt" % s)
-    exit()
     for i in range(9):
         print((" " + str(i) + " ").center(50, "="))
         FrankenPiler("examples/example_%d.txt" % i)
+    for lang in ["c", "js", "lua", "py"]:
+        print((" " + lang + " ").center(50, "="))
+        FrankenPiler("examples/example_%s.txt" % lang)
